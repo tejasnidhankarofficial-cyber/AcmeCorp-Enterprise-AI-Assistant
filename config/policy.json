@@ -1,0 +1,14 @@
+{
+  "roles": {
+    "intern":   {"servers": ["docs"],                          "can_write": false},
+    "employee": {"servers": ["docs", "notes", "tickets"],      "can_write": true},
+    "manager":  {"servers": ["docs", "notes", "tickets"],      "can_write": true},
+    "hr":       {"servers": ["docs", "hr", "notes", "tickets"], "can_write": true}
+  },
+  "users": {
+    "ivan":  "intern",
+    "alice": "employee",
+    "bob":   "manager",
+    "hana":  "hr"
+  }
+}

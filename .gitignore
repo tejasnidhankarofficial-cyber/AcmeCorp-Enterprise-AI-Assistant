@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+logs/
+config/host_secrets.json
+config/server_tokens.json
+data/*.db
+.env

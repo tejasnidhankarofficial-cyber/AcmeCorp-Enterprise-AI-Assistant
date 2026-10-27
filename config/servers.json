@@ -1,0 +1,10 @@
+{
+  "docs":    {"module": "servers.filesystem.server", "args": ["--name", "docs", "--root", "docs"],
+              "description": "Company handbook, IT and finance documents (read-only, sandboxed)"},
+  "hr":      {"module": "servers.filesystem.server", "args": ["--name", "hr", "--root", "hr"],
+              "description": "Restricted HR policies (read-only, sandboxed)"},
+  "notes":   {"module": "servers.notes.server", "args": [],
+              "description": "Team notes and meeting minutes (read/write)"},
+  "tickets": {"module": "servers.tickets.server", "args": [],
+              "description": "IT/HR helpdesk tickets (read + create)"}
+}
