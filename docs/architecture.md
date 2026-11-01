@@ -29,7 +29,8 @@ Employee ── CLI (host/cli.py) or HTTP (host/api.py)
 5. **Gate** each call:
    - read-only tool: run it.
    - side-effecting tool: check `can_write` for the role (`denied_role`), then ask the human
-     (`denied_user`), then run (`approved`).
+     (`denied_user`), then run (`approved`). Over HTTP the run pauses and returns `pending_approval`;
+     only the same user can answer, and silence for 120 s counts as a no.
 6. **Execute** with MCP `tools/call`. Results are scanned for injection patterns and wrapped in
    `<untrusted_tool_output>` before the LLM sees them.
 7. **Audit**: every decision is written to `logs/audit.jsonl`.
@@ -82,8 +83,8 @@ server is reused with a different root. The host code did not change.
 ## Known limitations / next steps
 
 - Roles come from a static file and the API trusts the `user` field. Real deployments need OIDC/JWT.
-- Approval is synchronous. The HTTP API only supports "deny" or "pre-approve"; a real UI would hold the
-  call pending.
+- The HTTP approval flow (`host/approvals.py`) keeps paused runs in process memory, so it needs a single
+  worker. Scaling out would need a shared store for pending approvals.
 - Keyword search only. A vector index inside the docs server would improve retrieval.
 - Resource subscriptions (change notifications when a policy updates) are not implemented.
 - The injection detector is regex-based.

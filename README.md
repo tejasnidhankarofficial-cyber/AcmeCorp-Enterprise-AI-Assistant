@@ -16,7 +16,7 @@ and a full audit trail.
 - Approval gate for side-effecting tools, classified from the server's own `readOnlyHint` annotation
 - Audited tool calls (`logs/audit.jsonl`), prompt-injection tripwire, path-traversal protection
 - Works with Claude (tool use) or an offline planner, so it runs with no API key
-- CLI and FastAPI interfaces, 14 end-to-end tests
+- CLI and FastAPI interfaces, 20 end-to-end tests
 
 See [docs/architecture.md](docs/architecture.md) for the design, the security boundaries and the
 MCP vs. function-calling comparison.
@@ -82,7 +82,18 @@ curl 'localhost:8000/tools?user=ivan'
 curl -X POST localhost:8000/ask -H 'content-type: application/json' \
   -d '{"user":"alice","question":"Create a ticket: test","approve_writes":true,"offline":true}'
 curl 'localhost:8000/audit?n=5'
+
+# Interactive approval: the run pauses at a side-effecting tool and waits for a human decision
+curl -X POST localhost:8000/ask -H 'content-type: application/json' \
+  -d '{"user":"alice","question":"Create a ticket: test","interactive":true,"offline":true}'
+#  -> {"status":"pending_approval","approval_id":"ab12...","tool":"create_ticket","args":{...}}
+curl -X POST localhost:8000/approvals/ab12... -H 'content-type: application/json' \
+  -d '{"user":"alice","approve":true}'
+#  -> {"status":"done","answer":"...","trace":[...]}
 ```
+
+Only the user who started a run can answer its approvals, and an unanswered approval is rejected after
+120 s (fail closed).
 
 ## Tests
 
@@ -91,7 +102,7 @@ pytest
 ```
 
 They run against real stdio MCP servers on isolated temp data and cover role-scoped discovery, approval
-and denial with no side effect, path traversal, per-server tokens, injection flagging and the audit shape.
+and denial with no side effect, path traversal, per-server tokens, injection flagging the audit shape and the API pending-approval flow (approve, reject, wrong user, timeout).
 
 ## Project layout
 
@@ -106,5 +117,5 @@ tests/       end-to-end tests
 
 ## Possible improvements
 
-Remote servers over HTTP with OAuth, a pending-approval UI, resource subscriptions, vector search in the
+Remote servers over HTTP with OAuth, a web UI for approvals, resource subscriptions, vector search in the
 docs server, and real SSO for identity.
