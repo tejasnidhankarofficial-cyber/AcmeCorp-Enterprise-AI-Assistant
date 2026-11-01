@@ -8,7 +8,8 @@ CONFIG_DIR = Path(os.environ.get("MCP_CONFIG_DIR", ROOT / "config"))
 DATA_DIR = Path(os.environ.get("MCP_DATA_DIR", ROOT / "data"))
 LOG_DIR = Path(os.environ.get("MCP_LOG_DIR", ROOT / "logs"))
 AUDIT_LOG = LOG_DIR / "audit.jsonl"
-MODEL = os.environ.get("ASSISTANT_MODEL", "claude-sonnet-5-5")
+MODEL = os.environ.get("ASSISTANT_MODEL", "claude-sonnet-5-5")  # Anthropic
+OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
 
 def load_servers() -> dict:

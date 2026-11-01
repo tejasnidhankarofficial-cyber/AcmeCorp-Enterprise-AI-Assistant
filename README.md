@@ -15,8 +15,8 @@ and a full audit trail.
 - Role-based tool visibility: an intern never even discovers the HR server
 - Approval gate for side-effecting tools, classified from the server's own `readOnlyHint` annotation
 - Audited tool calls (`logs/audit.jsonl`), prompt-injection tripwire, path-traversal protection
-- Works with Claude (tool use) or an offline planner, so it runs with no API key
-- CLI and FastAPI interfaces, 20 end-to-end tests
+- Pluggable LLM: OpenAI or Claude tool calling, or an offline planner so it runs with no API key
+- CLI and FastAPI interfaces, 25 tests
 
 See [docs/architecture.md](docs/architecture.md) for the design, the security boundaries and the
 MCP vs. function-calling comparison.
@@ -28,7 +28,10 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python scripts/setup_config.py      # generate per-server tokens (gitignored)
 python scripts/seed_data.py         # create tickets.db and notes.db
-export ANTHROPIC_API_KEY=...        # optional; without it the offline planner is used
+# pick an LLM (optional; with no key the offline planner is used):
+export OPENAI_API_KEY=...           # OpenAI, model via OPENAI_MODEL (default gpt-4o-mini)
+# export ANTHROPIC_API_KEY=...      # or Anthropic Claude, model via ASSISTANT_MODEL
+# export LLM_PROVIDER=openai|anthropic|offline   # force a choice when both keys are set
 ```
 
 Users and roles (`config/policy.json`): `ivan` intern, `alice` employee, `bob` manager, `hana` hr.

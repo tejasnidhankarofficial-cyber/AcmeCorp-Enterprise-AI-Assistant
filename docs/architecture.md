@@ -74,8 +74,10 @@ server is reused with a different root. The host code did not change.
 
 - **stdio transport**: simplest secure default for local servers: no network port, and the parent
   process owns the child. Remote servers (HTTP/SSE with OAuth) are the next step.
-- **Offline planner**: keeps the demo and tests deterministic and free of API calls. The Claude planner
-  uses the same interface, so the rest of the host is identical.
+- **Planner interface**: OpenAI, Claude and the offline planner all implement `next_turn(messages, tools)`.
+  The host keeps one internal message format; the OpenAI adapter converts it. Swapping the LLM never touches
+  the MCP client, policy, approval or audit code, which is the point of using a standard tool protocol.
+- **Offline planner**: keeps the demo and tests deterministic and free of API calls.
 - **Namespacing** (`server__tool`) avoids collisions between servers and makes audit entries unambiguous.
 - **Annotations as the source of truth** for side effects, so a new server's write tools are gated
   without host changes.

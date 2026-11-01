@@ -50,6 +50,50 @@ class ClaudePlanner:
         return Turn(text, calls, [b.model_dump(exclude_none=True) for b in resp.content])
 
 
+def to_openai_messages(messages: list[dict]) -> list[dict]:
+    """Convert the host's Anthropic-style history to OpenAI chat format."""
+    out: list[dict] = [{"role": "system", "content": SYSTEM}]
+    for m in messages:
+        content = m["content"]
+        if isinstance(content, str):
+            out.append({"role": m["role"], "content": content})
+        elif m["role"] == "assistant":
+            text = "".join(b["text"] for b in content if b["type"] == "text")
+            calls = [{"id": b["id"], "type": "function",
+                      "function": {"name": b["name"], "arguments": json.dumps(b["input"])}}
+                     for b in content if b["type"] == "tool_use"]
+            msg: dict = {"role": "assistant", "content": text or None}
+            if calls:
+                msg["tool_calls"] = calls
+            out.append(msg)
+        else:  # user turn carrying tool results -> one "tool" message per result
+            out += [{"role": "tool", "tool_call_id": b["tool_use_id"], "content": b["content"]} for b in content]
+    return out
+
+
+class OpenAIPlanner:
+    def __init__(self, model: str = config.OPENAI_MODEL):
+        import openai
+        self.client, self.model = openai.AsyncOpenAI(), model
+
+    async def next_turn(self, messages: list[dict], tools: list[dict]) -> Turn:
+        resp = await self.client.chat.completions.create(
+            model=self.model, messages=to_openai_messages(messages),
+            tools=[{"type": "function", "function": {"name": t["name"], "description": t["description"],
+                                                      "parameters": t["input_schema"]}} for t in tools])
+        msg = resp.choices[0].message
+        calls = []
+        for tc in msg.tool_calls or []:
+            try:
+                args = json.loads(tc.function.arguments or "{}")
+            except json.JSONDecodeError:
+                args = {}
+            calls.append(ToolCall(tc.id, tc.function.name, args))
+        content: list = ([{"type": "text", "text": msg.content}] if msg.content else []) + \
+                        [{"type": "tool_use", "id": c.id, "name": c.name, "input": c.args} for c in calls]
+        return Turn(msg.content or "", calls, content)
+
+
 class OfflinePlanner:
     """Keyword router: picks tools by intent, then summarizes the tool results."""
 
@@ -172,8 +216,16 @@ class OfflinePlanner:
         return "\n".join(lines)
 
 
-def make_planner(offline: bool = False):
+def make_planner(offline: bool = False, provider: str | None = None):
+    """Pick a planner: LLM_PROVIDER=openai|anthropic|offline, else whichever API key is set, else offline."""
     import os
-    if offline or not os.environ.get("ANTHROPIC_API_KEY"):
+    if offline:
         return OfflinePlanner()
-    return ClaudePlanner()
+    provider = (provider or os.environ.get("LLM_PROVIDER", "")).lower()
+    if not provider:
+        provider = ("openai" if os.environ.get("OPENAI_API_KEY")
+                    else "anthropic" if os.environ.get("ANTHROPIC_API_KEY") else "offline")
+    planners = {"openai": OpenAIPlanner, "anthropic": ClaudePlanner, "offline": OfflinePlanner}
+    if provider not in planners:
+        raise SystemExit(f"unknown LLM_PROVIDER '{provider}' (use openai, anthropic or offline)")
+    return planners[provider]()
