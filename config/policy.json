@@ -1,14 +1,45 @@
 {
   "roles": {
-    "intern":   {"servers": ["docs"],                          "can_write": false},
-    "employee": {"servers": ["docs", "notes", "tickets"],      "can_write": true},
-    "manager":  {"servers": ["docs", "notes", "tickets"],      "can_write": true},
-    "hr":       {"servers": ["docs", "hr", "notes", "tickets"], "can_write": true}
+    "intern": {
+      "servers": [
+        "docs"
+      ],
+      "can_write": false,
+      "audit_all": false
+    },
+    "employee": {
+      "servers": [
+        "docs",
+        "notes",
+        "tickets"
+      ],
+      "can_write": true,
+      "audit_all": false
+    },
+    "manager": {
+      "servers": [
+        "docs",
+        "notes",
+        "tickets"
+      ],
+      "can_write": true,
+      "audit_all": true
+    },
+    "hr": {
+      "servers": [
+        "docs",
+        "hr",
+        "notes",
+        "tickets"
+      ],
+      "can_write": true,
+      "audit_all": true
+    }
   },
   "users": {
-    "ivan":  "intern",
+    "ivan": "intern",
     "alice": "employee",
-    "bob":   "manager",
-    "hana":  "hr"
+    "bob": "manager",
+    "hana": "hr"
   }
 }

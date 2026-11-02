@@ -34,3 +34,17 @@ def tail(path: Path, n: int = 10) -> list[dict]:
     if not path.exists():
         return []
     return [json.loads(line) for line in path.read_text().splitlines()[-n:]]
+
+
+def query(path: Path, *, user: str | None = None, server: str | None = None, decision: str | None = None,
+          flagged: bool | None = None, limit: int = 100) -> list[dict]:
+    """Filtered audit entries, newest first."""
+    if not path.exists():
+        return []
+    entries = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    keep = [e for e in reversed(entries)
+            if (user is None or e["user"] == user)
+            and (server is None or e["server"] == server)
+            and (decision is None or e["decision"] == decision)
+            and (flagged is None or bool(e["flags"]) == flagged)]
+    return keep[:limit]

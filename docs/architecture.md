@@ -82,9 +82,19 @@ server is reused with a different root. The host code did not change.
 - **Annotations as the source of truth** for side effects, so a new server's write tools are gated
   without host changes.
 
+## Frontend
+
+React + TypeScript + Tailwind (Vite). The browser talks only to the FastAPI host, never to MCP servers, so
+every security decision stays server-side. The UI is a view over the same flow: `/tools` for discovery,
+`/ask` with `interactive` for runs that can pause, `/approvals/{id}` for decisions and `/audit?viewer=` for
+history. In production the built UI is served by FastAPI from the same origin, so no CORS is needed.
+
+Audit visibility is policy-driven (`audit_all` per role) and enforced by the API: a viewer cannot widen their
+view by passing another `user` filter.
+
 ## Known limitations / next steps
 
-- Roles come from a static file and the API trusts the `user` field. Real deployments need OIDC/JWT.
+- Roles come from a static file and the API trusts the `user`/`viewer` field (the UI is a demo identity switcher). Real deployments need OIDC/JWT.
 - The HTTP approval flow (`host/approvals.py`) keeps paused runs in process memory, so it needs a single
   worker. Scaling out would need a shared store for pending approvals.
 - Keyword search only. A vector index inside the docs server would improve retrieval.

@@ -16,7 +16,7 @@ and a full audit trail.
 - Approval gate for side-effecting tools, classified from the server's own `readOnlyHint` annotation
 - Audited tool calls (`logs/audit.jsonl`), prompt-injection tripwire, path-traversal protection
 - Pluggable LLM: OpenAI or Claude tool calling, or an offline planner so it runs with no API key
-- CLI and FastAPI interfaces, 25 tests
+- CLI, FastAPI and a React web UI (identity switcher, live tool trace, approval cards, audit viewer)
 
 See [docs/architecture.md](docs/architecture.md) for the design, the security boundaries and the
 MCP vs. function-calling comparison.
@@ -77,6 +77,25 @@ Add `--offline` to force the keyword planner. Interactive mode: `python -m host.
 
 `decision` is one of `allowed`, `approved`, `denied_role`, `denied_user`, `error`.
 
+## Web UI
+
+```bash
+cd frontend && npm install && npm run build && cd ..   # once
+uvicorn host.api:app                                   # UI + API on http://localhost:8000
+```
+
+For frontend development run `uvicorn host.api:app` and, in `frontend/`, `npm run dev`
+(http://localhost:5173, API calls are proxied to port 8000).
+
+- **Left:** switch between the demo users and see the tools each role discovers (hr/notes/tickets disappear for the intern).
+- **Centre:** chat. Side-effecting tools pause the run and show an **approval card** with the exact arguments and
+  a countdown to the server's auto-reject.
+- **Right:** live trace of every MCP call with its decision chip and any injection warning.
+- **Audit log tab:** filter by user, server and decision. Employees and interns see only their own entries;
+  roles with `audit_all` in `config/policy.json` (manager, hr) see everyone's.
+
+Frontend tests: `cd frontend && npm test`.
+
 ## HTTP API
 
 ```bash
@@ -84,7 +103,8 @@ uvicorn host.api:app --reload
 curl 'localhost:8000/tools?user=ivan'
 curl -X POST localhost:8000/ask -H 'content-type: application/json' \
   -d '{"user":"alice","question":"Create a ticket: test","approve_writes":true,"offline":true}'
-curl 'localhost:8000/audit?n=5'
+curl 'localhost:8000/audit?viewer=hana&server=tickets'   # viewer decides what is visible
+curl localhost:8000/users                                  # demo users and roles
 
 # Interactive approval: the run pauses at a side-effecting tool and waits for a human decision
 curl -X POST localhost:8000/ask -H 'content-type: application/json' \
@@ -110,6 +130,7 @@ and denial with no side effect, path traversal, per-server tokens, injection fla
 ## Project layout
 
 ```
+frontend/    React + TypeScript + Tailwind UI (Vite)
 host/        assistant loop, MCP client manager, policy, audit, guard, planners, CLI, API
 servers/     filesystem (docs + hr), notes, tickets  - independent MCP servers
 config/      servers.json, policy.json (tokens are generated and gitignored)

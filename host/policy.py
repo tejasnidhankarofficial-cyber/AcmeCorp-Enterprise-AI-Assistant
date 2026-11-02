@@ -11,6 +11,7 @@ class Identity:
     role: str
     servers: tuple[str, ...]
     can_write: bool
+    audit_all: bool = False
 
 
 def resolve_identity(user: str) -> Identity:
@@ -19,7 +20,13 @@ def resolve_identity(user: str) -> Identity:
     if role is None:
         raise PermissionError(f"unknown user: {user}")
     spec = policy["roles"][role]
-    return Identity(user=user, role=role, servers=tuple(spec["servers"]), can_write=spec["can_write"])
+    return Identity(user=user, role=role, servers=tuple(spec["servers"]), can_write=spec["can_write"],
+                    audit_all=spec.get("audit_all", False))
+
+
+def list_identities() -> list[Identity]:
+    users = json.loads((config.CONFIG_DIR / "policy.json").read_text())["users"]
+    return [resolve_identity(u) for u in users]
 
 
 def is_read_only(tool) -> bool:

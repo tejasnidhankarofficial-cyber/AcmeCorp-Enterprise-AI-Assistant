@@ -65,3 +65,39 @@ async def test_read_only_question_never_pauses(client, env):
 
 async def test_unknown_user_is_forbidden(client, env):
     assert (await client.post("/ask", json={**ASK, "user": "mallory"})).status_code == 403
+
+
+async def _seed_audit(client):
+    await client.post("/ask", json={"user": "alice", "question": "What is the leave policy?", "offline": True})
+    await client.post("/ask", json={"user": "hana", "question": "What is the salary band?", "offline": True})
+
+
+async def test_users_endpoint_lists_roles(client):
+    users = {u["user"]: u for u in (await client.get("/users")).json()}
+    assert users["ivan"]["servers"] == ["docs"] and users["hana"]["audit_all"] is True
+    assert users["alice"]["audit_all"] is False
+
+
+async def test_audit_is_scoped_to_the_viewer_unless_role_allows_all(client):
+    await _seed_audit(client)
+    own = (await client.get("/audit", params={"viewer": "alice"})).json()
+    assert own and {e["user"] for e in own} == {"alice"}
+    # alice cannot widen her view by asking for someone else's entries
+    spoof = (await client.get("/audit", params={"viewer": "alice", "user": "hana"})).json()
+    assert {e["user"] for e in spoof} == {"alice"}
+    everyone = (await client.get("/audit", params={"viewer": "hana"})).json()
+    assert {e["user"] for e in everyone} == {"alice", "hana"}
+
+
+async def test_audit_filters_and_order(client):
+    await _seed_audit(client)
+    hr_only = (await client.get("/audit", params={"viewer": "bob", "server": "hr"})).json()
+    assert hr_only and all(e["server"] == "hr" for e in hr_only)
+    allowed = (await client.get("/audit", params={"viewer": "bob", "decision": "allowed", "user": "alice"})).json()
+    assert all(e["decision"] == "allowed" and e["user"] == "alice" for e in allowed)
+    ts = [e["ts"] for e in (await client.get("/audit", params={"viewer": "bob"})).json()]
+    assert ts == sorted(ts, reverse=True)
+
+
+async def test_audit_rejects_unknown_viewer(client):
+    assert (await client.get("/audit", params={"viewer": "mallory"})).status_code == 403
